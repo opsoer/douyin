@@ -6,7 +6,7 @@
 
 
 
-#### feed proto接口定义
+#### feed-srv proto接口定义
 
 ```protobuf
 syntax = "proto3";
