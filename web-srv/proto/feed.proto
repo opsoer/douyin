@@ -1,0 +1,58 @@
+syntax = "proto3";
+option go_package = ".;proto";
+import "google/protobuf/empty.proto";
+service Feed {
+  rpc GetVideos (LatestTime) returns (VideoInfoList);
+  rpc GetVideoComIdList (VideoBasicInfo) returns (CommentList);
+  rpc BatchGetComment(CommentList) returns (ContentList);
+  rpc CreateVideo (CreateVideoInfo) returns (VideoBasicInfo);
+  rpc GetVideoList(VideoBasicInfo) returns (VideoInfoList);
+  rpc UpdateVideoInfo(VideoInfo) returns (google.protobuf.Empty);
+  rpc CommentAction (commentInfo)returns(google.protobuf.Empty);
+}
+message commentInfo {
+  int32 userId = 1;
+  int32 videoId = 2;
+  int32  comment_id = 3; //删除评论要用
+  int32 actionType = 4; // 1为发布评论  2为删除评论
+  string commentText = 5;
+}
+message CreateVideoInfo {
+  int32 userId = 1;
+  string playUrl = 2;
+  string coverUrl = 3;
+  string title = 4;
+}
+message Content {
+  int32 userId = 1;
+  string str = 2;
+}
+message ContentList {
+  repeated Content contentList = 1;
+}
+message LatestTime {
+  int64 time = 1;
+}
+message VideoInfo {
+  int32 id = 1;
+  int32 userId = 2;
+  string playUrl = 3;
+  string coverUrl = 4;
+  string title = 5;
+  int32 favorite_count = 6;
+  int32 comment_count = 7;
+  repeated int32 commentList = 8;
+}
+message VideoInfoList {
+  repeated VideoInfo videoInfos = 1;
+}
+message NextTime {
+  uint64 time = 2;
+}
+message VideoBasicInfo {
+  repeated int32 videoId = 1;
+}
+message CommentList {
+  repeated int32 ComIdList = 1;
+}
+
