@@ -37,7 +37,6 @@ func (u *UserServer) CreateUser(ctx context.Context, req *proto.CreateUserInfo) 
 		return nil, status.Errorf(codes.AlreadyExists, "用户名已存在")
 	}
 	user.Name = req.Username
-	//TODO 这里密码可以用摘要算法加密一下
 	//密码加密
 	options := &password.Options{16, 100, 32, sha512.New}
 	salt, encodedPwd := password.Encode(req.Password, options)
