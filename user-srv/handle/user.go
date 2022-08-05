@@ -2,13 +2,17 @@ package handle
 
 import (
 	"context"
+	"crypto/sha512"
 	"dy_uer_srv/global"
 	model "dy_uer_srv/modle"
 	"dy_uer_srv/proto"
+	"fmt"
+	"github.com/anaskhan96/go-password-encoder"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	"strings"
 )
 
 type UserServer struct{}
@@ -32,26 +36,27 @@ func (u *UserServer) CreateUser(ctx context.Context, req *proto.CreateUserInfo) 
 		zap.S().Infof("用户[%s]已经存在", req.Username)
 		return nil, status.Errorf(codes.AlreadyExists, "用户名已存在")
 	}
-	//TODO 这里密码可以用摘要算法加密一下
 	user.Name = req.Username
-	user.Password = req.Password
+	//TODO 这里密码可以用摘要算法加密一下
+	//密码加密
+	options := &password.Options{16, 100, 32, sha512.New}
+	salt, encodedPwd := password.Encode(req.Password, options)
+	user.Password = fmt.Sprintf("$pbkdf2-sha512$%s$%s", salt, encodedPwd)
 
 	result = global.DB.Create(&user)
 	if result.Error != nil {
 		zap.S().Infof("创建用户失败")
 		return nil, status.Errorf(codes.Internal, "创建用户失败")
 	}
+
 	return &proto.UserInfoResponse{UserId: int32(user.ID)}, nil
 }
 
 func (u *UserServer) CheckPassWord(ctx context.Context, req *proto.PasswordCheckInfo) (*proto.CheckResponse, error) {
-	//检查数据库里面是否有这个用户
-	//CheckPassWord(ctx context.Context, in *PasswordCheckInfo, opts ...grpc.CallOption) (*CheckResponse, error)
-	user := model.User{}
-	if result := global.DB.Where(&model.User{Name: req.Username, Password: req.Password}).First(&user); result.RowsAffected == 0 {
-		return &proto.CheckResponse{Success: false}, status.Errorf(codes.NotFound, "用户不存在")
-	}
-	return &proto.CheckResponse{Id: int32(user.ID), Success: user.Password == req.Password}, nil
+	options := &password.Options{16, 100, 32, sha512.New}
+	passwordInfo := strings.Split(req.Password, "$")
+	check := password.Verify(req.Password, passwordInfo[2], passwordInfo[3], options)
+	return &proto.CheckResponse{Success: check}, nil
 }
 
 func (u *UserServer) BatchGetUserDetail(ctx context.Context, req *proto.UserBasicInfo) (*proto.UserDetailInfoList, error) {
@@ -66,12 +71,12 @@ func (u *UserServer) BatchGetUserDetail(ctx context.Context, req *proto.UserBasi
 		userDetailInfo := &proto.UserDetailInfo{
 			Id:            int32(user.ID),
 			Name:          user.Name,
-			Passward:	   user.Password,
+			Passward:      user.Password,
 			FollowCount:   user.Follow_count,
 			FollowerCount: user.Follower_count,
 			Follows:       user.FollowList,
 			Followers:     user.FollowerList,
-			FavList: user.FavList,
+			FavList:       user.FavList,
 		}
 		userDetailInfoList = append(userDetailInfoList, userDetailInfo)
 	}
@@ -114,7 +119,7 @@ func (*UserServer) UpdateUserInfo(ctx context.Context, req *proto.UserDetailInfo
 	userInfo = &model.User{
 		//TODO 这里密码可以用摘要算法加密一下  因为无要求写这个接口  所以没实现修改密码的操作
 		Name:           req.Name,
-		Password: 		req.Passward,
+		Password:       req.Passward,
 		Follow_count:   req.FollowCount,
 		Follower_count: req.FollowerCount,
 		FollowerList:   req.Follows,
