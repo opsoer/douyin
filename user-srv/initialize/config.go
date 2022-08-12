@@ -9,7 +9,7 @@ import (
 func InitConfig() {
 	v := viper.New()
 	//文件的路径如何设置
-	v.SetConfigFile("D:\\Users\\峥嵘\\Desktop\\douyinByZR\\user-srv\\user_srv.yaml")
+	v.SetConfigFile("user_srv.yaml")
 	if err := v.ReadInConfig(); err != nil {
 		panic(err)
 	}

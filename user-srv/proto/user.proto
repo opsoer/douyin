@@ -12,6 +12,8 @@ service User{
   rpc UpdateUserInfo (UserDetailInfo) returns (google.protobuf.Empty);
   rpc FavoriteAction (favInfo)returns(google.protobuf.Empty);
   rpc RelationAction(RelationActionInfo)returns(google.protobuf.Empty);
+  //TODO 点赞列表  显示用户所有点赞的视频
+  //  rpc GetFavList (UserBasicInfo) returns();
 }
 
 message RelationActionInfo {

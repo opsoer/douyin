@@ -49,7 +49,7 @@ func (f *Favorites) Scan(value interface{}) error {
 type User struct {
 	gorm.Model
 	Password       string `gorm:"type:varchar(100);not null"`
-	Name           string `gorm:"type:varchar(20)"`
+	Name           string `gorm:"type:varchar(20);index:idx_name"`
 	Follow_count   int32
 	Follower_count int32
 	FollowerList   Followers
