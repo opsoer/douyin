@@ -17,21 +17,10 @@ import (
 
 type UserServer struct{}
 
-//CreateUser(context.Context, *CreateUserInfo) (*UserInfoResponse, error)
-//CheckPassWord(context.Context, *PasswordCheckInfo) (*CheckResponse, error)
-//GetUserDetail(context.Context, *UserBasicInfo) (*UserDetailInfo, error)
-//GetUserVideoList(context.Context, *UserBasicInfo) (*VideoIdList, error)
-//GetUserFollows(context.Context, *UserBasicInfo) (*UserFollowsInfo, error)
-//GetUserFollowers(context.Context, *UserBasicInfo) (*UserFollowersInfo, error)
-//UpdateUserInfo(context.Context, *UserDetailInfo) (*Empty, error)
-//FavoriteAction(context.Context, *FavInfo) (*Empty, error)
-//RelationAction(context.Context, *RelationActionInfo) (*emptypb.Empty, error)
-//CommentAction(context.Context, *CommentInfo) (*emptypb.Empty, error)
-
 func (u *UserServer) CreateUser(ctx context.Context, req *proto.CreateUserInfo) (*proto.UserInfoResponse, error) {
 	//新建用户
 	var user model.User
-	result := global.DB.Where(&model.User{Name: req.Username, Password: req.Password}).First(&user)
+	result := global.DB.Where(&model.User{Name: req.Username}).First(&user)
 	if result.RowsAffected == 1 {
 		zap.S().Infof("用户[%s]已经存在", req.Username)
 		return nil, status.Errorf(codes.AlreadyExists, "用户名已存在")
@@ -41,7 +30,7 @@ func (u *UserServer) CreateUser(ctx context.Context, req *proto.CreateUserInfo) 
 	options := &password.Options{16, 100, 32, sha512.New}
 	salt, encodedPwd := password.Encode(req.Password, options)
 	user.Password = fmt.Sprintf("$pbkdf2-sha512$%s$%s", salt, encodedPwd)
-
+	zap.S().Infof(user.Password)
 	result = global.DB.Create(&user)
 	if result.Error != nil {
 		zap.S().Infof("创建用户失败")
@@ -52,10 +41,14 @@ func (u *UserServer) CreateUser(ctx context.Context, req *proto.CreateUserInfo) 
 }
 
 func (u *UserServer) CheckPassWord(ctx context.Context, req *proto.PasswordCheckInfo) (*proto.CheckResponse, error) {
+	userInfo := model.User{}
+	global.DB.Where(&model.User{Name:req.Username}).First(&userInfo)
 	options := &password.Options{16, 100, 32, sha512.New}
-	passwordInfo := strings.Split(req.Password, "$")
+	passwordInfo := strings.Split(userInfo.Password, "$")
+	zap.S().Infof(req.Password)
 	check := password.Verify(req.Password, passwordInfo[2], passwordInfo[3], options)
-	return &proto.CheckResponse{Success: check}, nil
+	zap.S().Info(check)
+	return &proto.CheckResponse{Success: check, Id: int32(userInfo.ID)}, nil
 }
 
 func (u *UserServer) BatchGetUserDetail(ctx context.Context, req *proto.UserBasicInfo) (*proto.UserDetailInfoList, error) {
@@ -115,10 +108,14 @@ func (*UserServer) UpdateUserInfo(ctx context.Context, req *proto.UserDetailInfo
 	if result.Error != nil {
 		return nil, status.Error(codes.Internal, result.Error.Error())
 	}
+
+	options := &password.Options{16, 100, 32, sha512.New}
+	salt, encodedPwd := password.Encode(req.Passward, options)
+	password := fmt.Sprintf("$pbkdf2-sha512$%s$%s", salt, encodedPwd)
+
 	userInfo = &model.User{
-		//TODO 这里密码可以用摘要算法加密一下  因为无要求写这个接口  所以没实现修改密码的操作
 		Name:           req.Name,
-		Password:       req.Passward,
+		Password:       password,
 		Follow_count:   req.FollowCount,
 		Follower_count: req.FollowerCount,
 		FollowerList:   req.Follows,

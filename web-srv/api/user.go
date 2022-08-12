@@ -62,7 +62,7 @@ func Register(c *gin.Context) {
 		status.FromError(err)
 		zap.S().Info("创建用户失败：err: ", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": "创建用户失败",
+			"message": err.Error(),
 		})
 		return
 	}
@@ -77,6 +77,7 @@ func Login(c *gin.Context) {
 	//用户注册
 	name := c.Query("username")
 	password := c.Query("password")
+
 	rsp, err := global.UserSrvCli.CheckPassWord(context.Background(), &proto.PasswordCheckInfo{
 		Username: name,
 		Password: password,
@@ -102,7 +103,6 @@ func Login(c *gin.Context) {
 		StandardClaims: jwt.StandardClaims{
 			NotBefore: time.Now().Unix(),               //签名的生效时间
 			ExpiresAt: time.Now().Unix() + 60*60*24*30, //30天过期
-			Issuer:    "imooc",
 		},
 	}
 	token, err := j.CreateToken(claims)
@@ -144,8 +144,6 @@ func UserInfo(c *gin.Context) {
 		"name":           rsp.UserDetailInfoList[0].Name,
 		"follow_count":   rsp.UserDetailInfoList[0].FollowCount,
 		"follower_count": rsp.UserDetailInfoList[0].FollowerCount,
-		//TODO  is_follow  先默认false   应该先查表
-		"is_follow": false,
 	})
 }
 
