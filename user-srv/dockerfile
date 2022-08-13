@@ -1,16 +1,11 @@
 FROM golang:latest AS builder
 ENV GOPROXY https://goproxy.cn
 WORKDIR /src
-
 COPY . .
-RUN ls -al
-
 RUN go mod download
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app .
-RUN ls -al
 
 FROM alpine:latest
 COPY ./user_srv.yaml /
 COPY --from=builder /src/app /
-
 ENTRYPOINT ["/app"]
